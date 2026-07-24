@@ -16,6 +16,10 @@
   $('#smart-toggle .ic').innerHTML = icon('zap', { size: 14 });
   $('#more-btn').innerHTML = icon('more-horizontal', { size: 18 });
   $('#send-btn').innerHTML = icon('play', { size: 15 });
+  $('#browser-btn').innerHTML = icon('globe', { size: 15 });
+  $('#br-back').innerHTML = icon('arrow-left', { size: 14 });
+  $('#br-forward').innerHTML = icon('arrow-right', { size: 14 });
+  $('#br-refresh').innerHTML = icon('rotate-cw', { size: 14 });
 
   // ---- state -------------------------------------------------------------
   let settings = null;
@@ -133,12 +137,24 @@
     await cue.settingsSet({ smart: settings.smart });
   });
 
-  // Hide / collapse
-  $('#hide-btn').addEventListener('click', () => {
-    const collapsed = $('#panel').classList.toggle('collapsed');
-    $('#hide-btn').classList.toggle('collapsed', collapsed);
-    $('#live-dot').style.display = collapsed ? 'none' : '';
-  });
+  // Hide / collapse — works for both assistant and browser views
+  let uiHidden = false;
+  function toggleHide() {
+    uiHidden = !uiHidden;
+    $('#hide-btn').classList.toggle('collapsed', uiHidden);
+    $('#live-dot').style.display = uiHidden ? 'none' : '';
+    if (uiHidden) {
+      // Hide whichever panels are showing
+      $('#panel-wrap').classList.add('force-hidden');
+      $('#browser-wrap').classList.add('force-hidden');
+    } else {
+      // Restore: show the one that should be visible based on browserVisible state
+      $('#panel-wrap').classList.remove('force-hidden');
+      $('#browser-wrap').classList.remove('force-hidden');
+    }
+  }
+  $('#hide-btn').addEventListener('click', toggleHide);
+  cue.on('hide:toggle', toggleHide);
 
   // Stop = start/stop listening. Kick off system-audio capture straight from the click so
   // the user-gesture is fresh for getDisplayMedia (loopback capture needs it).
@@ -306,10 +322,69 @@
   function setIgnore(v) { if (v !== ignoring) { ignoring = v; cue.setIgnoreMouse(v); } }
   document.addEventListener('mousemove', (e) => {
     const el = document.elementFromPoint(e.clientX, e.clientY);
-    const overUI = !!(el && el.closest && el.closest('#toolbar, #panel-wrap, #settings-scrim, #onboard-scrim'));
+    const overUI = !!(el && el.closest && el.closest('#toolbar, #panel-wrap, #browser-wrap, #settings-scrim, #onboard-scrim'));
     setIgnore(!overUI);
   });
   setIgnore(true); // start fully click-through; hovering the panel re-enables it
+
+  // ---- embedded browser --------------------------------------------------
+  let browserVisible = false;
+  const browserWrap = $('#browser-wrap');
+  const panelWrap = $('#panel-wrap');
+  const webview = $('#br-webview');
+  const urlInput = $('#br-url');
+
+  function toggleBrowser() {
+    browserVisible = !browserVisible;
+    browserWrap.classList.toggle('hidden', !browserVisible);
+    panelWrap.classList.toggle('hidden', browserVisible);
+    $('#browser-btn').classList.toggle('active', browserVisible);
+    if (browserVisible) urlInput.focus();
+  }
+
+  $('#browser-btn').addEventListener('click', toggleBrowser);
+  cue.on('browser:toggle', toggleBrowser);
+
+  function navigateTo(url) {
+    if (!url) return;
+    url = url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      // If it looks like a domain, add https. Otherwise treat as search.
+      if (/^[a-z0-9]+(\.[a-z]{2,})/i.test(url)) url = 'https://' + url;
+      else url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+    }
+    webview.src = url;
+    urlInput.value = url;
+  }
+
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); navigateTo(urlInput.value); }
+  });
+
+  // Quick-link buttons
+  document.querySelectorAll('.br-qlink').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.br-qlink').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      navigateTo(btn.dataset.url);
+    });
+  });
+
+  // Navigation controls
+  $('#br-back').addEventListener('click', () => { if (webview.canGoBack()) webview.goBack(); });
+  $('#br-forward').addEventListener('click', () => { if (webview.canGoForward()) webview.goForward(); });
+  $('#br-refresh').addEventListener('click', () => webview.reload());
+
+  // Update URL bar when webview navigates
+  webview.addEventListener('did-navigate', (e) => { urlInput.value = e.url; highlightQuickLink(e.url); });
+  webview.addEventListener('did-navigate-in-page', (e) => { if (e.isMainFrame) { urlInput.value = e.url; highlightQuickLink(e.url); } });
+
+  function highlightQuickLink(url) {
+    document.querySelectorAll('.br-qlink').forEach((b) => {
+      const match = url && url.includes(new URL(b.dataset.url).hostname);
+      b.classList.toggle('active', !!match);
+    });
+  }
 
   // ---- onboarding / first-run tutorial -----------------------------------
   const obScrim = $('#onboard-scrim');

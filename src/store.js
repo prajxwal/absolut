@@ -13,7 +13,7 @@ const DEFAULTS = {
     openai:    { fast: 'gpt-4o-mini',               smart: 'gpt-4o' },
     anthropic: { fast: 'claude-3-5-haiku-latest',   smart: 'claude-3-5-sonnet-latest' },
     gemini:    { fast: 'gemini-1.5-flash',           smart: 'gemini-1.5-pro' },
-    groq:      { fast: 'meta-llama/llama-4-scout-17b-16e-instruct', smart: 'llama-3.3-70b-versatile' }
+    groq:      { fast: 'llama-3.3-70b-versatile',                     smart: 'llama-3.3-70b-versatile' }
   }
 };
 

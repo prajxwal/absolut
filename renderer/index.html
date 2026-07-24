@@ -15,6 +15,8 @@
       <button class="tb-hide" id="hide-btn"><span class="chev"></span><span>Hide</span></button>
       <div class="tb-divider"></div>
       <button class="tb-stop" id="stop-btn" title="Start / stop listening"></button>
+      <div class="tb-divider"></div>
+      <button class="tb-browser" id="browser-btn" title="Hidden Browser (Ctrl+B)"></button>
     </div>
 
     <!-- Main assistant panel -->
@@ -44,6 +46,29 @@
             <div class="spacer"></div>
             <button id="send-btn" title="Send"></button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden browser panel -->
+    <div id="browser-wrap" class="hidden">
+      <div id="browser-panel" class="glass no-drag">
+        <div id="browser-nav">
+          <button id="br-back" class="br-nav-btn" title="Back"></button>
+          <button id="br-forward" class="br-nav-btn" title="Forward"></button>
+          <button id="br-refresh" class="br-nav-btn" title="Refresh"></button>
+          <div id="br-url-wrap">
+            <input id="br-url" type="text" placeholder="Enter URL or search..." spellcheck="false" autocomplete="off" />
+          </div>
+        </div>
+        <div id="br-quicklinks">
+          <button class="br-qlink" data-url="https://chatgpt.com">ChatGPT</button>
+          <button class="br-qlink" data-url="https://claude.ai">Claude</button>
+          <button class="br-qlink" data-url="https://gemini.google.com">Gemini</button>
+          <button class="br-qlink" data-url="https://chat.deepseek.com">DeepSeek</button>
+        </div>
+        <div id="br-view-wrap">
+          <webview id="br-webview" src="about:blank" partition="persist:browser"></webview>
         </div>
       </div>
     </div>

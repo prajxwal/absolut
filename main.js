@@ -9,6 +9,17 @@ const { rms16 } = require('./src/wav');
 
 let win = null;
 
+// -------- single instance lock --------
+// Prevents a second launch from claiming shortcuts or creating a second window.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => { if (win && !win.isDestroyed()) { win.showInactive(); } });
+}
+
+// Disguise process name shown in Task Manager
+app.setName('RuntimeHost');
+
 // -------- capture / transcript state --------
 const state = { capturing: false, busy: false, transcribing: { you: false, them: false } };
 let sttDisabled = false; // set when the key can't reach any speech model (stops retry spam)
@@ -41,7 +52,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      webviewTag: true
     }
   });
 
@@ -176,10 +188,17 @@ ipcMain.on('log', (_e, msg) => console.log('[renderer]', msg));
 
 // -------- shortcuts --------
 function registerShortcuts() {
-  globalShortcut.register('CommandOrControl+Return', () => runFeature('assist', ''));
-  globalShortcut.register('CommandOrControl+H', () => runFeature('leetcode', ''));
-  globalShortcut.register('CommandOrControl+Shift+X', () => app.quit());
-  globalShortcut.register('CommandOrControl+Shift+Alt+P', () => app.quit());
+  const reg = (key, fn) => {
+    const ok = globalShortcut.register(key, fn);
+    console.log(`[shortcut] ${key}: ${ok ? 'registered' : 'FAILED (already claimed?)'}`);
+  };
+  reg('CommandOrControl+Return',       () => runFeature('assist', ''));
+  reg('CommandOrControl+H',            () => runFeature('leetcode', ''));
+  reg('CommandOrControl+Shift+X',      () => app.quit());
+  reg('CommandOrControl+Shift+Alt+P',  () => app.quit());
+  reg('CommandOrControl+Shift+Alt+X',  () => app.quit());
+  reg('CommandOrControl+Shift+Alt+H',  () => send('hide:toggle', {}));
+  reg('CommandOrControl+Shift+Alt+B',  () => send('browser:toggle', {}));
 }
 
 // -------- lifecycle --------
