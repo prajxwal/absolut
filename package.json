@@ -1,16 +1,15 @@
 {
   "name": "cue",
   "version": "0.1.0",
-  "description": "Open-source macOS invisible AI overlay — three separate inputs (screen, mic, system audio) into an LLM. A Cluely-style copilot for meetings and coding problems.",
+  "description": "Open-source Windows invisible AI overlay — three separate inputs (screen, mic, system audio) into an LLM. A Cluely-style copilot for meetings and coding problems.",
   "license": "GPL-3.0-or-later",
   "author": "cue",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --mac zip",
-    "dist:win": "electron-builder --win",
-    "dist:win:portable": "electron-builder --win portable"
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable"
   },
   "build": {
     "appId": "com.cue.overlay",
@@ -22,21 +21,7 @@
       "src/**/*",
       "renderer/**/*"
     ],
-    "mac": {
-      "target": [
-        "dir"
-      ],
-      "category": "public.app-category.productivity",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "identity": null,
-      "extendInfo": {
-        "LSUIElement": true,
-        "NSMicrophoneUsageDescription": "cue transcribes your microphone so it can help you in conversations.",
-        "NSCameraUsageDescription": "cue does not use the camera.",
-        "NSAudioCaptureUsageDescription": "cue captures system audio to transcribe the other participant in a call."
-      }
-    },
+
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] },
@@ -57,8 +42,7 @@
     "overlay",
     "ai",
     "assistant",
-    "screencapturekit",
-    "macos"
+    "windows"
   ],
   "devDependencies": {
     "electron": "33.2.1",

@@ -3,9 +3,7 @@
   const { icon } = window.ICONS;
   const cue = window.cue; // exposed by preload
   const $ = (s) => document.querySelector(s);
-  const isWin = cue.platform === 'win32';
-  const isMac = cue.platform === 'darwin';
-  const cmdKey = isMac ? '⌘' : 'Ctrl';
+  const cmdKey = 'Ctrl';
 
   // ---- paint icons -------------------------------------------------------
   $('#logo-btn').innerHTML = icon('logo', { size: 18 });
@@ -186,7 +184,7 @@
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       stream.getVideoTracks().forEach((t) => t.stop()); // we only want the audio
       const tracks = stream.getAudioTracks();
-      if (!tracks.length) { cue.log('system audio: no loopback track (macOS loopback unsupported here)'); stream.getTracks().forEach((t) => t.stop()); return; }
+      if (!tracks.length) { cue.log('system audio: no loopback track'); stream.getTracks().forEach((t) => t.stop()); return; }
       sysStream = stream;
       sysCtx = new AudioContext({ sampleRate: 16000 });
       sysNode = sysCtx.createMediaStreamSource(new MediaStream(tracks));
@@ -300,8 +298,7 @@
   // ---- global keys -------------------------------------------------------
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !scrim.classList.contains('hidden')) closeSettings();
-    // Cmd+, on Mac, Ctrl+, on Windows
-    if ((isMac ? e.metaKey : e.ctrlKey) && e.key === ',') { e.preventDefault(); openSettings(); }
+    if (e.ctrlKey && e.key === ',') { e.preventDefault(); openSettings(); }
   });
 
   // ---- click-through: only the UI blocks the mouse; empty gaps pass to your screen ----
@@ -317,27 +314,16 @@
   // ---- onboarding / first-run tutorial -----------------------------------
   const obScrim = $('#onboard-scrim');
 
-  const permButtons = isWin
-    ? [
-        { label: 'Open Microphone settings', action: () => cue.openPane('ms-settings:privacy-microphone') },
-        { label: 'Open Camera & Privacy settings', action: () => cue.openPane('ms-settings:privacy-broadfilesystemaccess') }
-      ]
-    : [
-        { label: 'Open Microphone settings', action: () => cue.openPane('x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone') },
-        { label: 'Open Screen Recording settings', action: () => cue.openPane('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture') }
-      ];
+  const permButtons = [
+    { label: 'Open Microphone settings', action: () => cue.openPane('ms-settings:privacy-microphone') },
+    { label: 'Open Camera & Privacy settings', action: () => cue.openPane('ms-settings:privacy-broadfilesystemaccess') }
+  ];
 
-  const permBody = isWin
-    ? 'cue needs access to your microphone and screen. Windows will prompt you automatically the first time you use each feature — just click <strong>Allow</strong>.<br><br>You can also grant them manually:<ul><li><strong>Microphone</strong> — Start → Settings → Privacy &amp; Security → Microphone → turn on <strong>cue</strong></li><li><strong>Screen &amp; audio capture</strong> — Start → Settings → Privacy &amp; Security → Screen capture → turn on <strong>cue</strong></li></ul>'
-    : 'cue needs two macOS permissions. Click each button, turn <strong>cue</strong> ON in the window that opens, then come back here.<ul><li><strong>Microphone</strong> — to hear you</li><li><strong>Screen Recording</strong> — to see your screen and hear meeting audio</li></ul>';
+  const permBody = 'cue needs access to your microphone and screen. Windows will prompt you automatically the first time you use each feature \u2014 just click <strong>Allow</strong>.<br><br>You can also grant them manually:<ul><li><strong>Microphone</strong> \u2014 Start \u2192 Settings \u2192 Privacy &amp; Security \u2192 Microphone \u2192 turn on <strong>cue</strong></li><li><strong>Screen &amp; audio capture</strong> \u2014 Start \u2192 Settings \u2192 Privacy &amp; Security \u2192 Screen capture \u2192 turn on <strong>cue</strong></li></ul>';
 
-  const zoomBody = isWin
-    ? 'cue is hidden from most screen-share tools automatically (Google Meet, Teams — nothing to do). <strong>Zoom needs one setting:</strong><br><br>Zoom → <span class="hl">Settings</span> → <span class="hl">Share Screen</span> → <span class="hl">Advanced</span> → <strong>Screen capture mode</strong> → choose <strong>&ldquo;Advanced capture with window filtering.&rdquo;</strong><br><br>Avoid &ldquo;<strong>without</strong> window filtering&rdquo; — that mode reveals cue.<br><br><strong>Note:</strong> screen-capture exclusion requires Windows 10 version 2004 (build 19041) or later.'
-    : 'cue is hidden from most screen shares automatically (Google Meet, Teams, QuickTime — nothing to do). <strong>Zoom needs one setting:</strong><br><br>Zoom → <span class="hl">Settings</span> → <span class="hl">Share Screen</span> → <span class="hl">Advanced</span> → <strong>Screen capture mode</strong> → choose <strong>&ldquo;Advanced capture with window filtering.&rdquo;</strong><br><br>Avoid &ldquo;<strong>without</strong> window filtering&rdquo; — that mode reveals cue.';
+  const zoomBody = 'cue is hidden from most screen-share tools automatically (Google Meet, Teams \u2014 nothing to do). <strong>Zoom needs one setting:</strong><br><br>Zoom \u2192 <span class="hl">Settings</span> \u2192 <span class="hl">Share Screen</span> \u2192 <span class="hl">Advanced</span> \u2192 <strong>Screen capture mode</strong> \u2192 choose <strong>&ldquo;Advanced capture with window filtering.&rdquo;</strong><br><br>Avoid &ldquo;<strong>without</strong> window filtering&rdquo; \u2014 that mode reveals cue.<br><br><strong>Note:</strong> screen-capture exclusion requires Windows 10 version 2004 (build 19041) or later.';
 
-  const quitShortcut = isWin
-    ? '<span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">X</span>'
-    : '<span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">X</span>';
+  const quitShortcut = '<span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">X</span>';
 
   const finalBody = `How to use cue:<ul>
     <li><span class="kbd">${cmdKey}</span> <span class="kbd">↵</span> — <strong>Assist</strong> with whatever's on screen or being said</li>
