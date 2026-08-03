@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('cue', {
   systemPcm: (arrayBuffer) => ipcRenderer.send('system:pcm', arrayBuffer),
   setIgnoreMouse: (v) => ipcRenderer.send('mouse:ignore', v),
   openPane: (url) => ipcRenderer.send('open-pane', url),
+  shortcutsChanged: () => ipcRenderer.send('shortcuts:changed'),
   log: (msg) => ipcRenderer.send('log', msg),
   on: (channel, cb) => {
     const allowed = ['capture:state', 'llm:start', 'llm:token', 'llm:done', 'llm:error', 'status', 'transcript', 'browser:toggle', 'hide:toggle'];

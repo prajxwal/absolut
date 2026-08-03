@@ -48,6 +48,7 @@ function createWindow() {
     skipTaskbar: true,
     alwaysOnTop: true,
     fullscreenable: false,
+    type: 'toolbar',          // tool-window: hidden from Alt+Tab and Task Manager "Apps"
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -185,20 +186,29 @@ ipcMain.on('system:pcm', (_e, arrayBuffer) => { if (state.capturing) buffers.the
 ipcMain.on('mouse:ignore', (_e, v) => { if (win) win.setIgnoreMouseEvents(!!v, { forward: true }); });
 ipcMain.on('open-pane', (_e, url) => { shell.openExternal(url).catch(() => {}); });
 ipcMain.on('log', (_e, msg) => console.log('[renderer]', msg));
+ipcMain.on('shortcuts:changed', () => reregisterShortcuts());
 
 // -------- shortcuts --------
 function registerShortcuts() {
+  const shortcuts = store.getSettings().shortcuts || {};
   const reg = (key, fn) => {
+    if (!key) return;
     const ok = globalShortcut.register(key, fn);
     console.log(`[shortcut] ${key}: ${ok ? 'registered' : 'FAILED (already claimed?)'}`);
   };
-  reg('CommandOrControl+Return',       () => runFeature('assist', ''));
-  reg('CommandOrControl+H',            () => runFeature('leetcode', ''));
-  reg('CommandOrControl+Shift+X',      () => app.quit());
+  reg(shortcuts.assist   || 'CommandOrControl+Return',       () => runFeature('assist', ''));
+  reg(shortcuts.leetcode || 'CommandOrControl+H',            () => runFeature('leetcode', ''));
+  reg(shortcuts.quit     || 'CommandOrControl+Shift+X',      () => app.quit());
+  // Emergency quit shortcuts — always registered, not user-rebindable
   reg('CommandOrControl+Shift+Alt+P',  () => app.quit());
   reg('CommandOrControl+Shift+Alt+X',  () => app.quit());
-  reg('CommandOrControl+Shift+Alt+H',  () => send('hide:toggle', {}));
-  reg('CommandOrControl+Shift+Alt+B',  () => send('browser:toggle', {}));
+  reg(shortcuts.toggleHide    || 'CommandOrControl+Shift+Alt+H',  () => send('hide:toggle', {}));
+  reg(shortcuts.toggleBrowser || 'CommandOrControl+Shift+Alt+B',  () => send('browser:toggle', {}));
+}
+
+function reregisterShortcuts() {
+  globalShortcut.unregisterAll();
+  registerShortcuts();
 }
 
 // -------- lifecycle --------

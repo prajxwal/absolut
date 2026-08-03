@@ -6,7 +6,7 @@
   "author": "cue",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node start.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win",
     "dist:portable": "electron-builder --win portable"
@@ -23,7 +23,12 @@
     ],
     "win": {
       "target": [
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "requestedExecutionLevel": "asInvoker"
     }
@@ -37,7 +42,8 @@
   ],
   "devDependencies": {
     "electron": "^33.2.1",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "rcedit": "^5.0.2"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

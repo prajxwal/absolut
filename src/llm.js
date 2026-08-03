@@ -77,7 +77,7 @@ async function streamGemini({ apiKey, model, system, turns, imageDataUrl, maxTok
 
 // Groq is OpenAI-API-compatible — reuse the same streaming logic with a different baseURL.
 // Only llama-4 scout/maverick and llama-3.2 vision models accept image content on Groq.
-const GROQ_VISION_MODELS = ['llama-4-scout', 'llama-4-maverick', 'llama-3.2-11b-vision', 'llama-3.2-90b-vision'];
+const GROQ_VISION_MODELS = ['llama-4-scout', 'llama-4-maverick', 'llama-3.2-11b-vision', 'llama-3.2-90b-vision', 'llama-4-scout-17b-16e-instruct', 'llama-4-maverick-17b-128e-instruct'];
 function groqSupportsVision(model) { return GROQ_VISION_MODELS.some((m) => model.includes(m)); }
 
 async function streamGroq({ apiKey, model, system, turns, imageDataUrl, maxTokens, onToken }) {

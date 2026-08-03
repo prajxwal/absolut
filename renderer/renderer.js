@@ -29,6 +29,78 @@
 
   const messages = $('#messages');
 
+  // ---- shortcut helpers ---------------------------------------------------
+  const SHORTCUT_DEFAULTS = {
+    assist:        'CommandOrControl+Return',
+    leetcode:      'CommandOrControl+H',
+    quit:          'CommandOrControl+Shift+X',
+    toggleHide:    'CommandOrControl+Shift+Alt+H',
+    toggleBrowser: 'CommandOrControl+Shift+Alt+B'
+  };
+
+  // Convert an Electron accelerator string to an array of display labels
+  function accelToDisplay(accel) {
+    if (!accel) return [];
+    return accel.split('+').map((k) => {
+      const lk = k.toLowerCase();
+      if (lk === 'commandorcontrol' || lk === 'cmdorctrl') return 'Ctrl';
+      if (lk === 'control') return 'Ctrl';
+      if (lk === 'shift') return 'Shift';
+      if (lk === 'alt') return 'Alt';
+      if (lk === 'return') return '↵';
+      if (lk === 'escape') return 'Esc';
+      if (lk === 'backspace') return '⌫';
+      if (lk === 'delete') return 'Del';
+      if (lk === 'space') return 'Space';
+      if (lk === 'tab') return 'Tab';
+      if (lk === 'up') return '↑';
+      if (lk === 'down') return '↓';
+      if (lk === 'left') return '←';
+      if (lk === 'right') return '→';
+      return k.charAt(0).toUpperCase() + k.slice(1);
+    });
+  }
+
+  // Render key badges into a recorder div
+  function renderRecorder(el, accel) {
+    el.innerHTML = '';
+    el.dataset.accel = accel || '';
+    const parts = accelToDisplay(accel);
+    parts.forEach((label, i) => {
+      if (i > 0) { const sep = document.createElement('span'); sep.className = 's-key-sep'; sep.textContent = '+'; el.appendChild(sep); }
+      const badge = document.createElement('span');
+      badge.className = 's-key';
+      badge.textContent = label;
+      el.appendChild(badge);
+    });
+  }
+
+  // Convert a browser KeyboardEvent to an Electron accelerator string
+  function keyEventToAccel(e) {
+    const mods = [];
+    if (e.ctrlKey || e.metaKey) mods.push('CommandOrControl');
+    if (e.shiftKey) mods.push('Shift');
+    if (e.altKey) mods.push('Alt');
+    // Map the actual key
+    const ignore = ['Control', 'Shift', 'Alt', 'Meta'];
+    if (ignore.includes(e.key)) return null; // modifier-only, wait for the actual key
+    let key = e.key;
+    if (key === 'Enter') key = 'Return';
+    else if (key === ' ') key = 'Space';
+    else if (key === 'ArrowUp') key = 'Up';
+    else if (key === 'ArrowDown') key = 'Down';
+    else if (key === 'ArrowLeft') key = 'Left';
+    else if (key === 'ArrowRight') key = 'Right';
+    else if (key === 'Backspace') key = 'Backspace';
+    else if (key === 'Delete') key = 'Delete';
+    else if (key === 'Escape') key = 'Escape';
+    else if (key === 'Tab') key = 'Tab';
+    else if (/^F\d{1,2}$/.test(key)) { /* F1-F12, keep as-is */ }
+    else key = key.toUpperCase();
+    mods.push(key);
+    return mods.join('+');
+  }
+
   function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
   // minimal, safe markdown: fenced code, bullets, inline code, bold, paragraphs
@@ -275,6 +347,13 @@
     $('#key-groq').value      = settings.apiKeys.groq      || '';
     const m = settings.models[settings.provider] || { fast: '', smart: '' };
     $('#model-fast').value = m.fast; $('#model-smart').value = m.smart;
+    // Fill shortcut recorders
+    const sc = settings.shortcuts || SHORTCUT_DEFAULTS;
+    document.querySelectorAll('.s-shortcut-row').forEach((row) => {
+      const key = row.dataset.shortcut;
+      const recorder = row.querySelector('.shortcut-recorder');
+      renderRecorder(recorder, sc[key] || SHORTCUT_DEFAULTS[key] || '');
+    });
     $('#s-status').textContent = statusText();
   }
   function statusText() {
@@ -298,7 +377,15 @@
     if (!settings.models[settings.provider]) settings.models[settings.provider] = {};
     settings.models[settings.provider].fast  = $('#model-fast').value.trim();
     settings.models[settings.provider].smart = $('#model-smart').value.trim();
+    // Gather shortcuts from recorder fields
+    if (!settings.shortcuts) settings.shortcuts = {};
+    document.querySelectorAll('.s-shortcut-row').forEach((row) => {
+      const key = row.dataset.shortcut;
+      const recorder = row.querySelector('.shortcut-recorder');
+      settings.shortcuts[key] = recorder.dataset.accel || SHORTCUT_DEFAULTS[key];
+    });
     await cue.settingsSet(settings);
+    cue.shortcutsChanged();
   }
 
   // ---- example conversation (matches the reference screenshot) ------------
@@ -311,8 +398,55 @@
     messages.appendChild(ai);
   }
 
+  // ---- shortcut recorder setup -------------------------------------------
+  let activeRecorder = null;
+  function setupShortcutRecorders() {
+    document.querySelectorAll('.s-shortcut-row').forEach((row) => {
+      const key = row.dataset.shortcut;
+      const recorder = row.querySelector('.shortcut-recorder');
+      const resetBtn = row.querySelector('.shortcut-reset');
+
+      recorder.addEventListener('click', () => {
+        // Deactivate any other active recorder
+        if (activeRecorder && activeRecorder !== recorder) {
+          activeRecorder.classList.remove('recording');
+          renderRecorder(activeRecorder, activeRecorder.dataset.accel);
+        }
+        activeRecorder = recorder;
+        recorder.classList.add('recording');
+        recorder.innerHTML = '<span class="s-rec-hint">Press keys…</span>';
+        recorder.focus();
+      });
+
+      recorder.addEventListener('keydown', (e) => {
+        if (recorder !== activeRecorder) return;
+        e.preventDefault();
+        e.stopPropagation();
+        // Escape cancels recording
+        if (e.key === 'Escape') {
+          recorder.classList.remove('recording');
+          renderRecorder(recorder, recorder.dataset.accel);
+          activeRecorder = null;
+          return;
+        }
+        const accel = keyEventToAccel(e);
+        if (!accel) return; // modifier-only press, keep waiting
+        recorder.classList.remove('recording');
+        renderRecorder(recorder, accel);
+        activeRecorder = null;
+      });
+
+      resetBtn.addEventListener('click', () => {
+        if (activeRecorder === recorder) { activeRecorder = null; recorder.classList.remove('recording'); }
+        renderRecorder(recorder, SHORTCUT_DEFAULTS[key]);
+      });
+    });
+  }
+  setupShortcutRecorders();
+
   // ---- global keys -------------------------------------------------------
   document.addEventListener('keydown', (e) => {
+    if (activeRecorder) return; // don't handle global keys while recording a shortcut
     if (e.key === 'Escape' && !scrim.classList.contains('hidden')) closeSettings();
     if (e.ctrlKey && e.key === ',') { e.preventDefault(); openSettings(); }
   });
@@ -378,6 +512,11 @@
   // Update URL bar when webview navigates
   webview.addEventListener('did-navigate', (e) => { urlInput.value = e.url; highlightQuickLink(e.url); });
   webview.addEventListener('did-navigate-in-page', (e) => { if (e.isMainFrame) { urlInput.value = e.url; highlightQuickLink(e.url); } });
+
+  // Force default cursor inside webview pages so hover states don't reveal interactive elements
+  webview.addEventListener('dom-ready', () => {
+    webview.insertCSS('* { cursor: default !important; }');
+  });
 
   function highlightQuickLink(url) {
     document.querySelectorAll('.br-qlink').forEach((b) => {
