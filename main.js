@@ -60,7 +60,7 @@ function createWindow() {
 
   // Invisibility + overlay behavior. Set CUE_NO_PROTECT=1 to disable for debugging.
   win.setContentProtection(!process.env.CUE_NO_PROTECT);            // excluded from screen capture (best-effort)
-  win.setAlwaysOnTop(true, 'screen-saver', 1);
+  win.setAlwaysOnTop(true, 'pop-up-menu', 1);
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
@@ -229,6 +229,14 @@ app.whenReady().then(() => {
 
   createWindow();
   registerShortcuts();
+
+  // Re-assert always-on-top every second so browsers (e.g. HackerRank proctoring)
+  // can't push the overlay behind their window.
+  setInterval(() => {
+    if (win && !win.isDestroyed()) {
+      win.setAlwaysOnTop(true, 'pop-up-menu', 1);
+    }
+  }, 1000);
 
 
 });
